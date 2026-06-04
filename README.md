@@ -107,12 +107,12 @@ Fill in:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-public-anon-key
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-public-publishable-key
 ```
 
 Find these values in Supabase under **Project Settings → API**.
 
-Only the public anon key is used. Do not put a service role key in this app.
+Only the public publishable key is used. Do not put a service role key in this app.
 
 ## Run Locally
 
@@ -134,7 +134,7 @@ The simplest deployment target is Vercel.
 2. Import the repository in Vercel.
 3. Add the same environment variables:
    - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 4. Deploy.
 5. Use the deployed URL to generate the QR code.
 
