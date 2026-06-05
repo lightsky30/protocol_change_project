@@ -32,6 +32,11 @@ type Copy = {
   moodPlaceholder: string;
   songField: string;
   songPlaceholder: string;
+  searching: string;
+  noResults: string;
+  searchHint: string;
+  selectedSong: string;
+  clearSong: string;
   pinButton: string;
   pinning: string;
   // confirmation
@@ -69,7 +74,12 @@ export const translations: Record<Language, Copy> = {
     moodField: "기분",
     moodPlaceholder: "지금 하고 있는 생각은?",
     songField: "노래",
-    songPlaceholder: "듣고 있는 노래는?",
+    songPlaceholder: "노래 제목이나 가수를 검색하세요",
+    searching: "찾는 중…",
+    noResults: "검색 결과가 없어요.",
+    searchHint: "검색해서 노래를 골라 주세요.",
+    selectedSong: "고른 노래",
+    clearSong: "다시 고르기",
     pinButton: "벽에 붙이기",
     pinning: "벽에 붙이는 중…",
     confirmEyebrow: "남겨졌어요",
@@ -104,7 +114,12 @@ export const translations: Record<Language, Copy> = {
     moodField: "mood",
     moodPlaceholder: "what's on your mind?",
     songField: "song",
-    songPlaceholder: "what's playing?",
+    songPlaceholder: "search a song title or artist",
+    searching: "searching…",
+    noResults: "No results found.",
+    searchHint: "Search and pick a song.",
+    selectedSong: "your pick",
+    clearSong: "pick again",
     pinButton: "pin it to the wall",
     pinning: "pinning it up…",
     confirmEyebrow: "left behind",

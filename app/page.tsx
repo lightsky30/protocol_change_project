@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import type { MusicResult } from "@/app/api/music/search/route";
 import { isSupabaseConfigured, SecretNote, supabase } from "@/lib/supabase";
 import {
   DEFAULT_LANGUAGE,
@@ -12,6 +13,7 @@ import {
 type LoadState = "loading" | "ready" | "error";
 type SubmitState = "idle" | "submitting" | "submitted";
 type View = "reading" | "writing";
+type SearchState = "idle" | "searching" | "done";
 
 let initialClaimStarted = false;
 
@@ -23,7 +25,10 @@ export default function Home() {
   const [waitingNote, setWaitingNote] = useState<SecretNote | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [mood, setMood] = useState("");
-  const [song, setSong] = useState("");
+  const [songQuery, setSongQuery] = useState("");
+  const [songResults, setSongResults] = useState<MusicResult[]>([]);
+  const [searchState, setSearchState] = useState<SearchState>("idle");
+  const [selectedSong, setSelectedSong] = useState<MusicResult | null>(null);
   const [leaving, setLeaving] = useState(false);
   const submittedRef = useRef(false);
 
@@ -40,6 +45,41 @@ export default function Home() {
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
+
+  // Debounced song search. Once a song is selected, searching pauses so the
+  // chosen result stays put; clearing the selection resumes it.
+  useEffect(() => {
+    const trimmed = songQuery.trim();
+
+    if (selectedSong || trimmed.length < 2) {
+      setSongResults([]);
+      setSearchState("idle");
+      return;
+    }
+
+    setSearchState("searching");
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `/api/music/search?term=${encodeURIComponent(trimmed)}`,
+          { signal: controller.signal }
+        );
+        const data = (await response.json()) as { results?: MusicResult[] };
+        setSongResults(data.results ?? []);
+        setSearchState("done");
+      } catch (err) {
+        if ((err as Error).name === "AbortError") return;
+        setSongResults([]);
+        setSearchState("done");
+      }
+    }, 300);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [songQuery, selectedSong]);
 
   function toggleLanguage() {
     const next: Language = language === "ko" ? "en" : "ko";
@@ -90,9 +130,8 @@ export default function Home() {
     if (submittedRef.current || submitState === "submitting") return;
 
     const trimmedMood = mood.trim();
-    const trimmedSong = song.trim();
 
-    if (!trimmedMood || !trimmedSong) {
+    if (!trimmedMood || !selectedSong) {
       setError("errNeedMoodSong");
       return;
     }
@@ -106,13 +145,15 @@ export default function Home() {
     setSubmitState("submitting");
     setError("");
 
-    // A note is now just a mood + a song. The song lives in the required
-    // `message` column so the existing NOT NULL constraint stays satisfied.
+    // A note is a mood + a song picked from search. The display text also goes
+    // into the required `message` column so the NOT NULL constraint holds, and
+    // the structured title/url are kept for richer rendering and linking.
+    const songTitle = `${selectedSong.title} — ${selectedSong.artist}`;
     const { error } = await supabase.from("secret_notes").insert({
       mood: trimmedMood,
-      message: trimmedSong,
-      music_title: null,
-      music_url: null
+      message: songTitle,
+      music_title: songTitle,
+      music_url: selectedSong.url || null
     });
 
     if (error) {
@@ -201,17 +242,92 @@ export default function Home() {
                 />
               </label>
 
-              <label>
-                <span>{t.songField}</span>
-                <input
-                  autoComplete="off"
-                  maxLength={120}
-                  onChange={(event) => setSong(event.target.value)}
-                  placeholder={t.songPlaceholder}
-                  required
-                  value={song}
-                />
-              </label>
+              <div className="song-field">
+                <span className="song-field-label">{t.songField}</span>
+
+                {selectedSong ? (
+                  <div className="selected-song">
+                    {selectedSong.artwork && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        className="song-art"
+                        src={selectedSong.artwork}
+                        alt=""
+                        width={48}
+                        height={48}
+                      />
+                    )}
+                    <span className="song-meta">
+                      <span className="song-title">{selectedSong.title}</span>
+                      <span className="song-artist">{selectedSong.artist}</span>
+                    </span>
+                    <button
+                      className="song-clear"
+                      type="button"
+                      onClick={() => {
+                        setSelectedSong(null);
+                        setSongQuery("");
+                      }}
+                    >
+                      {t.clearSong}
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      autoComplete="off"
+                      maxLength={120}
+                      onChange={(event) => setSongQuery(event.target.value)}
+                      placeholder={t.songPlaceholder}
+                      value={songQuery}
+                    />
+
+                    {searchState === "searching" && (
+                      <p className="song-status">{t.searching}</p>
+                    )}
+
+                    {searchState === "done" && songResults.length === 0 && (
+                      <p className="song-status">{t.noResults}</p>
+                    )}
+
+                    {songResults.length > 0 && (
+                      <ul className="song-results">
+                        {songResults.map((result) => (
+                          <li key={result.id}>
+                            <button
+                              className="song-result"
+                              type="button"
+                              onClick={() => {
+                                setSelectedSong(result);
+                                setError("");
+                              }}
+                            >
+                              {result.artwork && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  className="song-art"
+                                  src={result.artwork}
+                                  alt=""
+                                  width={40}
+                                  height={40}
+                                />
+                              )}
+                              <span className="song-meta">
+                                <span className="song-title">
+                                  {result.title}
+                                </span>
+                                <span className="song-artist">
+                                  {result.artist}
+                                </span>
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )}
+              </div>
 
               {resolvedError && (
                 <p className="form-error" role="alert">
@@ -221,7 +337,12 @@ export default function Home() {
 
               <button
                 className="submit-button"
-                disabled={!isSupabaseConfigured || submitState === "submitting"}
+                disabled={
+                  !isSupabaseConfigured ||
+                  submitState === "submitting" ||
+                  !mood.trim() ||
+                  !selectedSong
+                }
                 type="submit"
               >
                 {submitState === "submitting" ? t.pinning : t.pinButton}
@@ -325,7 +446,18 @@ function PreviousNote({
         <p className="note-song">
           <span className="note-mark" aria-hidden="true">♪</span>
           <span className="sr-only">{t.songLabel}: </span>
-          {songText}
+          {note.music_url ? (
+            <a
+              className="note-song-link"
+              href={note.music_url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {songText}
+            </a>
+          ) : (
+            songText
+          )}
         </p>
       )}
       <p className="disappeared">{t.disappeared}</p>
