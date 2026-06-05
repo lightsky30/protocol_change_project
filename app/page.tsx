@@ -2,33 +2,65 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { isSupabaseConfigured, SecretNote, supabase } from "@/lib/supabase";
+import {
+  DEFAULT_LANGUAGE,
+  Language,
+  LANGUAGE_STORAGE_KEY,
+  translations
+} from "@/lib/i18n";
 
 type LoadState = "loading" | "ready" | "error";
 type SubmitState = "idle" | "submitting" | "submitted";
+type View = "reading" | "writing";
 
-const MESSAGE_LIMIT = 200;
 let initialClaimStarted = false;
 
 export default function Home() {
+  const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [view, setView] = useState<View>("reading");
   const [waitingNote, setWaitingNote] = useState<SecretNote | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [mood, setMood] = useState("");
-  const [message, setMessage] = useState("");
-  const [musicTitle, setMusicTitle] = useState("");
-  const [musicUrl, setMusicUrl] = useState("");
+  const [song, setSong] = useState("");
   const submittedRef = useRef(false);
+
+  const t = translations[language];
+
+  // Restore the saved language so the choice persists during navigation.
+  useEffect(() => {
+    const saved = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (saved === "ko" || saved === "en") {
+      setLanguage(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
+  function toggleLanguage() {
+    const next: Language = language === "ko" ? "en" : "ko";
+    setLanguage(next);
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, next);
+  }
+
+  // errorMessage holds a translation key so the text re-translates when the
+  // language changes.
+  function setError(key: keyof typeof translations.ko | "") {
+    setErrorMessage(key);
+  }
 
   async function claimWaitingNote() {
     if (!supabase) {
-      setErrorMessage("Supabase is not configured yet.");
+      setError("errNotConfigured");
       setLoadState("error");
       return;
     }
 
     setLoadState("loading");
-    setErrorMessage("");
+    setError("");
 
     // The RPC deletes and returns one row in a single database operation,
     // so two visitors cannot read the same waiting note.
@@ -36,7 +68,7 @@ export default function Home() {
 
     if (error) {
       setWaitingNote(null);
-      setErrorMessage("The message box could not be opened. Try again quietly.");
+      setError("errOpenBox");
       setLoadState("error");
       return;
     }
@@ -57,68 +89,62 @@ export default function Home() {
     if (submittedRef.current || submitState === "submitting") return;
 
     const trimmedMood = mood.trim();
-    const trimmedMessage = message.trim();
-    const trimmedMusicTitle = musicTitle.trim();
-    const trimmedMusicUrl = musicUrl.trim();
+    const trimmedSong = song.trim();
 
-    if (!trimmedMood || !trimmedMessage) {
-      setErrorMessage("Leave at least a mood and a message.");
+    if (!trimmedMood || !trimmedSong) {
+      setError("errNeedMoodSong");
       return;
-    }
-
-    if (trimmedMessage.length > MESSAGE_LIMIT) {
-      setErrorMessage(`Keep the message under ${MESSAGE_LIMIT} characters.`);
-      return;
-    }
-
-    if (trimmedMusicUrl) {
-      try {
-        new URL(trimmedMusicUrl);
-      } catch {
-        setErrorMessage("The music URL does not look valid.");
-        return;
-      }
     }
 
     if (!supabase) {
-      setErrorMessage("Supabase is not configured yet.");
+      setError("errNotConfigured");
       return;
     }
 
     submittedRef.current = true;
     setSubmitState("submitting");
-    setErrorMessage("");
+    setError("");
 
+    // A note is now just a mood + a song. The song lives in the required
+    // `message` column so the existing NOT NULL constraint stays satisfied.
     const { error } = await supabase.from("secret_notes").insert({
       mood: trimmedMood,
-      message: trimmedMessage,
-      music_title: trimmedMusicTitle || null,
-      music_url: trimmedMusicUrl || null
+      message: trimmedSong,
+      music_title: null,
+      music_url: null
     });
 
     if (error) {
       submittedRef.current = false;
       setSubmitState("idle");
-      setErrorMessage(
-        error.code === "23505"
-          ? "Another message is already waiting. Refresh to open the box again."
-          : "Your message could not be left here. Please try again."
-      );
+      setError(error.code === "23505" ? "errAlreadyWaiting" : "errGeneric");
       return;
     }
 
     setSubmitState("submitted");
   }
 
+  const resolvedError = errorMessage
+    ? (t[errorMessage as keyof typeof t] as string) || ""
+    : "";
+
+  const toggle = (
+    <LanguageToggle
+      label={t.toggleLabel}
+      ariaLabel={t.toggleAria}
+      onToggle={toggleLanguage}
+    />
+  );
+
   if (submitState === "submitted") {
     return (
       <main className="page-shell">
-        <section className="panel confirmation-panel" aria-live="polite">
-          <p className="eyebrow">left behind</p>
-          <h1>Your message is now waiting for the next person.</h1>
-          <p className="soft-copy">
-            Close this page. The corner is quiet again.
-          </p>
+        {toggle}
+        <section className="paper confirmation" aria-live="polite">
+          <span className="pin" aria-hidden="true" />
+          <p className="eyebrow">{t.confirmEyebrow}</p>
+          <h1 className="confirm-title">{t.confirmTitle}</h1>
+          <p className="soft-copy">{t.confirmBody}</p>
         </section>
       </main>
     );
@@ -126,101 +152,57 @@ export default function Home() {
 
   return (
     <main className="page-shell">
-      <section className="panel">
-        <header className="intro">
-          <p className="eyebrow">staircase corner</p>
-          <h1>You found this place.</h1>
-          <p>
-            This is a message box for the staircase corner. One message waits
-            here. One person reads it. Then it disappears.
-          </p>
-        </header>
+      {toggle}
 
-        {loadState === "loading" && (
-          <div className="status-card" aria-live="polite">
-            <span className="pulse-dot" aria-hidden="true" />
-            Looking for a message...
-          </div>
-        )}
+      <section className="paper">
+        <span className="pin" aria-hidden="true" />
 
-        {loadState === "error" && (
-          <div className="status-card warning" role="alert">
-            <p>{errorMessage}</p>
-            <button className="quiet-button" type="button" onClick={claimWaitingNote}>
-              Try again
-            </button>
-          </div>
-        )}
-
-        {loadState === "ready" && (
+        {view === "writing" ? (
           <>
-            {waitingNote ? (
-              <PreviousNote note={waitingNote} />
-            ) : (
-              <div className="status-card empty-state">
-                <p>There is no message waiting here yet.</p>
-              </div>
-            )}
+            <button
+              className="back-link"
+              type="button"
+              onClick={() => {
+                setError("");
+                setView("reading");
+              }}
+            >
+              {t.back}
+            </button>
 
             <form className="note-form" onSubmit={handleSubmit}>
               <div className="form-heading">
-                <h2>Leave one for the next person.</h2>
-                <p>No name. No archive. Just this moment.</p>
+                <h2>{t.formTitle}</h2>
+                <p>{t.formSubtitle}</p>
               </div>
 
               <label>
-                <span>current mood</span>
+                <span>{t.moodField}</span>
                 <input
                   autoComplete="off"
                   maxLength={80}
                   onChange={(event) => setMood(event.target.value)}
-                  placeholder="quiet, tired, curious..."
+                  placeholder={t.moodPlaceholder}
                   required
                   value={mood}
                 />
               </label>
 
               <label>
-                <span>short message</span>
-                <textarea
-                  maxLength={MESSAGE_LIMIT}
-                  onChange={(event) => setMessage(event.target.value)}
-                  placeholder="write something small"
-                  required
-                  rows={5}
-                  value={message}
-                />
-              </label>
-              <p className="character-count">
-                {message.length}/{MESSAGE_LIMIT}
-              </p>
-
-              <label>
-                <span>song title</span>
+                <span>{t.songField}</span>
                 <input
                   autoComplete="off"
                   maxLength={120}
-                  onChange={(event) => setMusicTitle(event.target.value)}
-                  placeholder="what are you listening to?"
-                  value={musicTitle}
+                  onChange={(event) => setSong(event.target.value)}
+                  placeholder={t.songPlaceholder}
+                  required
+                  value={song}
                 />
               </label>
 
-              <label>
-                <span>music URL, optional</span>
-                <input
-                  autoComplete="off"
-                  inputMode="url"
-                  onChange={(event) => setMusicUrl(event.target.value)}
-                  placeholder="https://..."
-                  type="url"
-                  value={musicUrl}
-                />
-              </label>
-
-              {errorMessage && (
+              {resolvedError && (
                 <p className="form-error" role="alert">
-                  {errorMessage}
+                  {resolvedError}
                 </p>
               )}
 
@@ -229,9 +211,57 @@ export default function Home() {
                 disabled={!isSupabaseConfigured || submitState === "submitting"}
                 type="submit"
               >
-                {submitState === "submitting" ? "leaving it here..." : "leave message"}
+                {submitState === "submitting" ? t.pinning : t.pinButton}
               </button>
             </form>
+          </>
+        ) : (
+          <>
+            <header className="intro">
+              <p className="eyebrow">{t.eyebrow}</p>
+              <h1>{t.introTitle}</h1>
+              <p className="intro-body">{t.introBody}</p>
+            </header>
+
+            {loadState === "loading" && (
+              <div className="status-card" aria-live="polite">
+                <span className="pulse-dot" aria-hidden="true" />
+                {t.looking}
+              </div>
+            )}
+
+            {loadState === "error" && (
+              <div className="status-card warning" role="alert">
+                <p>{t.errorTitle}</p>
+                <button
+                  className="quiet-button"
+                  type="button"
+                  onClick={claimWaitingNote}
+                >
+                  {t.retry}
+                </button>
+              </div>
+            )}
+
+            {loadState === "ready" && (
+              <>
+                {waitingNote ? (
+                  <PreviousNote note={waitingNote} t={t} />
+                ) : (
+                  <div className="status-card empty-state">
+                    <p>{t.emptyWall}</p>
+                  </div>
+                )}
+
+                <button
+                  className="submit-button advance-button"
+                  type="button"
+                  onClick={() => setView("writing")}
+                >
+                  {t.goWrite}
+                </button>
+              </>
+            )}
           </>
         )}
       </section>
@@ -239,33 +269,52 @@ export default function Home() {
   );
 }
 
-function PreviousNote({ note }: { note: SecretNote }) {
+function LanguageToggle({
+  label,
+  ariaLabel,
+  onToggle
+}: {
+  label: string;
+  ariaLabel: string;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      className="language-toggle"
+      type="button"
+      aria-label={ariaLabel}
+      onClick={onToggle}
+    >
+      {label}
+    </button>
+  );
+}
+
+function PreviousNote({
+  note,
+  t
+}: {
+  note: SecretNote;
+  t: (typeof translations)[Language];
+}) {
+  // New notes store the song in `message`; older notes may still have it in
+  // `music_title`. Prefer whichever holds the song.
+  const songText = note.music_title || note.message;
+
   return (
     <article className="previous-note">
-      <p className="eyebrow">someone was here</p>
+      <p className="note-eyebrow">{t.someoneWasHere}</p>
       <dl>
         <div>
-          <dt>mood</dt>
+          <dt>{t.moodLabel}</dt>
           <dd>{note.mood}</dd>
         </div>
         <div>
-          <dt>message</dt>
-          <dd>{note.message}</dd>
-        </div>
-        <div>
-          <dt>music</dt>
-          <dd>
-            {note.music_url ? (
-              <a href={note.music_url} rel="noreferrer" target="_blank">
-                {note.music_title || "open song"}
-              </a>
-            ) : (
-              note.music_title || "no song was left"
-            )}
-          </dd>
+          <dt>{t.songLabel}</dt>
+          <dd className="note-message">{songText || t.noSong}</dd>
         </div>
       </dl>
-      <p className="disappeared">This message has now disappeared.</p>
+      <p className="disappeared">{t.disappeared}</p>
     </article>
   );
 }
