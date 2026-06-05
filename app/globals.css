@@ -304,6 +304,9 @@ h2 {
     0 0.6rem 1.4rem rgba(96, 80, 56, 0.16),
     inset 0 0 0 1px rgba(120, 106, 86, 0.06);
   transform: rotate(0.7deg);
+  /* pivot on the tape corner: the resting sway hangs from it, and the tear
+     peels from the same point with no jump */
+  transform-origin: 2.6rem -0.2rem;
   /* gentle entrance, then a barely-there sway like a note on a wall */
   animation:
     note-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both,
@@ -593,27 +596,40 @@ textarea::placeholder {
 }
 
 .reading-content.leaving .previous-note {
-  /* swing from the tape in the top-left corner, then drop */
-  transform-origin: 1.8rem -0.3rem;
-  animation: tear-off 0.6s cubic-bezier(0.45, 0, 0.75, 1) forwards;
+  /* the pivot is the tape in the top-left corner, so the far corner peels
+     up first while the taped corner stays put */
+  transform-origin: 2.6rem -0.2rem;
+  /* per-keyframe easing carries the timing; keep the shorthand neutral */
+  animation: tear-off 1.05s linear forwards;
 }
 
 @keyframes tear-off {
   0% {
     opacity: 1;
-    transform: rotate(0.7deg) translateY(0);
+    transform: rotate(0.7deg) translate(0, 0) skewX(0deg);
+    /* slow, deliberate peel */
+    animation-timing-function: cubic-bezier(0.25, 0.1, 0.35, 1);
   }
-  20% {
-    /* peel up off the wall */
-    transform: rotate(-6deg) translateY(-0.5rem) scale(1.02);
+  30% {
+    /* free corner lifts off the wall and the paper gently curls */
+    opacity: 1;
+    transform: rotate(-4.5deg) translateY(-0.4rem) skewX(-2.5deg) scale(1.022);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.5, 1);
   }
-  38% {
-    transform: rotate(4deg) translateY(0);
+  50% {
+    /* the tape gives way and the paper tips forward */
+    opacity: 1;
+    transform: rotate(2.5deg) translateY(0.1rem) skewX(-1deg) scale(1.008);
+    /* from here it falls under gravity — gradually accelerate */
+    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 1);
+  }
+  82% {
+    opacity: 1;
   }
   100% {
-    /* tear free and fall away */
+    /* torn free, fallen away below the wall */
     opacity: 0;
-    transform: rotate(18deg) translateY(135%) scale(0.96);
+    transform: rotate(15deg) translateY(155%) skewX(2.5deg) scale(0.92);
   }
 }
 
@@ -624,31 +640,41 @@ textarea::placeholder {
 
 /* the confirmation note is pressed onto the wall, then the pin pops in */
 .confirmation {
-  animation: pin-on 0.78s cubic-bezier(0.18, 0.9, 0.2, 1) both;
+  animation: pin-on 1.5s linear both;
 }
 
 @keyframes pin-on {
   0% {
     opacity: 0;
-    transform: translateY(-2.4rem) rotate(-5deg) scale(0.92);
+    transform: translateY(-3rem) rotate(-4.5deg) scale(0.92);
+    /* drifts down slowly and softly — no harsh acceleration */
+    animation-timing-function: cubic-bezier(0.33, 0, 0.45, 1);
   }
-  52% {
-    /* lands and presses against the wall */
+  58% {
+    /* settles gently against the wall, a soft squash */
     opacity: 1;
-    transform: translateY(0.3rem) rotate(0.9deg) scale(1.02, 0.985);
+    transform: translateY(0.16rem) rotate(0.7deg) scale(1.022, 0.98);
+    animation-timing-function: cubic-bezier(0.34, 0, 0.32, 1);
   }
-  70% {
-    transform: translateY(-0.12rem) rotate(-0.9deg) scale(0.997, 1.004);
+  74% {
+    /* a slow, gentle bounce */
+    transform: translateY(-0.2rem) rotate(-0.85deg) scale(0.992, 1.01);
+    animation-timing-function: ease-in-out;
+  }
+  88% {
+    transform: translateY(0.03rem) rotate(-0.35deg) scale(1.004, 0.997);
+    animation-timing-function: ease-in-out;
   }
   100% {
+    /* settled, pressed flat against the wall */
     opacity: 1;
     transform: translateY(0) rotate(-0.5deg) scale(1);
   }
 }
 
-/* the pin is pushed in just after the note settles */
+/* the pin is pushed in just after the note settles against the wall */
 .confirmation .pin {
-  animation: pin-press 0.42s cubic-bezier(0.3, 1.4, 0.5, 1) 0.46s both;
+  animation: pin-press 0.55s cubic-bezier(0.34, 1.35, 0.5, 1) 0.92s both;
 }
 
 @keyframes pin-press {

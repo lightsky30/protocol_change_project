@@ -134,7 +134,7 @@ export default function Home() {
       setError("");
       setView("writing");
       setLeaving(false);
-    }, 620);
+    }, 1080);
   }
 
   const resolvedError = errorMessage
@@ -153,7 +153,7 @@ export default function Home() {
     return (
       <main className="page-shell">
         {toggle}
-        <section className="paper confirmation" aria-live="polite">
+        <section key="note-pinned" className="paper confirmation" aria-live="polite">
           <span className="pin" aria-hidden="true" />
           <p className="eyebrow">{t.confirmEyebrow}</p>
           <h1 className="confirm-title">{t.confirmTitle}</h1>
@@ -167,7 +167,7 @@ export default function Home() {
     <main className="page-shell">
       {toggle}
 
-      <section className="paper">
+      <section key="note-wall" className="paper">
         <span className="pin" aria-hidden="true" />
 
         {view === "writing" ? (
