@@ -573,26 +573,47 @@ textarea::placeholder {
   }
 }
 
-/* reading "consumes" the note: it softly blurs away before writing opens */
-.reading-content {
-  transform-origin: center top;
-}
-
+/* reading "consumes" the note: the surrounding text fades while the note
+   itself peels off the wall and falls away, like tearing off a post-it */
 .reading-content.leaving {
-  animation: read-away 0.48s ease forwards;
   pointer-events: none;
 }
 
-@keyframes read-away {
-  from {
-    opacity: 1;
-    filter: blur(0);
-    transform: translateY(0) scale(1);
-  }
+.reading-content.leaving .intro,
+.reading-content.leaving .advance-button,
+.reading-content.leaving .status-card {
+  animation: fade-quick 0.26s ease forwards;
+}
+
+@keyframes fade-quick {
   to {
     opacity: 0;
-    filter: blur(7px);
-    transform: translateY(-0.6rem) scale(0.98);
+    transform: translateY(-0.3rem);
+  }
+}
+
+.reading-content.leaving .previous-note {
+  /* swing from the tape in the top-left corner, then drop */
+  transform-origin: 1.8rem -0.3rem;
+  animation: tear-off 0.6s cubic-bezier(0.45, 0, 0.75, 1) forwards;
+}
+
+@keyframes tear-off {
+  0% {
+    opacity: 1;
+    transform: rotate(0.7deg) translateY(0);
+  }
+  20% {
+    /* peel up off the wall */
+    transform: rotate(-6deg) translateY(-0.5rem) scale(1.02);
+  }
+  38% {
+    transform: rotate(4deg) translateY(0);
+  }
+  100% {
+    /* tear free and fall away */
+    opacity: 0;
+    transform: rotate(18deg) translateY(135%) scale(0.96);
   }
 }
 
@@ -601,18 +622,23 @@ textarea::placeholder {
   animation: note-in 0.45s ease both;
 }
 
-/* the confirmation note drops onto the wall and is pinned */
+/* the confirmation note is pressed onto the wall, then the pin pops in */
 .confirmation {
-  animation: pin-on 0.7s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  animation: pin-on 0.78s cubic-bezier(0.18, 0.9, 0.2, 1) both;
 }
 
 @keyframes pin-on {
   0% {
     opacity: 0;
-    transform: translateY(-1.4rem) rotate(-3.5deg) scale(0.95);
+    transform: translateY(-2.4rem) rotate(-5deg) scale(0.92);
   }
-  65% {
-    transform: translateY(0.15rem) rotate(0.6deg) scale(1.01);
+  52% {
+    /* lands and presses against the wall */
+    opacity: 1;
+    transform: translateY(0.3rem) rotate(0.9deg) scale(1.02, 0.985);
+  }
+  70% {
+    transform: translateY(-0.12rem) rotate(-0.9deg) scale(0.997, 1.004);
   }
   100% {
     opacity: 1;
@@ -620,14 +646,43 @@ textarea::placeholder {
   }
 }
 
+/* the pin is pushed in just after the note settles */
+.confirmation .pin {
+  animation: pin-press 0.42s cubic-bezier(0.3, 1.4, 0.5, 1) 0.46s both;
+}
+
+@keyframes pin-press {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-0.45rem) scale(0);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0.04rem) scale(1.3);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .paper,
   .pulse-dot,
   .previous-note,
-  .reading-content.leaving,
+  .reading-content.leaving .intro,
+  .reading-content.leaving .advance-button,
+  .reading-content.leaving .status-card,
+  .reading-content.leaving .previous-note,
   .note-form,
-  .confirmation {
+  .confirmation,
+  .confirmation .pin {
     animation: none;
+  }
+
+  /* still hide the consumed note instantly so the flow stays coherent */
+  .reading-content.leaving {
+    opacity: 0;
   }
 }
 

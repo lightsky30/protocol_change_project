@@ -125,7 +125,8 @@ export default function Home() {
     setSubmitState("submitted");
   }
 
-  // Reading "consumes" the note: it blurs away before the writing view opens.
+  // Reading "consumes" the note: it tears off the wall like a peeled post-it
+  // before the writing view opens.
   function goToWriting() {
     if (leaving) return;
     setLeaving(true);
@@ -133,7 +134,7 @@ export default function Home() {
       setError("");
       setView("writing");
       setLeaving(false);
-    }, 480);
+    }, 620);
   }
 
   const resolvedError = errorMessage
