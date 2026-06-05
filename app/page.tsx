@@ -24,6 +24,7 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState("");
   const [mood, setMood] = useState("");
   const [song, setSong] = useState("");
+  const [leaving, setLeaving] = useState(false);
   const submittedRef = useRef(false);
 
   const t = translations[language];
@@ -124,6 +125,17 @@ export default function Home() {
     setSubmitState("submitted");
   }
 
+  // Reading "consumes" the note: it blurs away before the writing view opens.
+  function goToWriting() {
+    if (leaving) return;
+    setLeaving(true);
+    window.setTimeout(() => {
+      setError("");
+      setView("writing");
+      setLeaving(false);
+    }, 480);
+  }
+
   const resolvedError = errorMessage
     ? (t[errorMessage as keyof typeof t] as string) || ""
     : "";
@@ -216,7 +228,7 @@ export default function Home() {
             </form>
           </>
         ) : (
-          <>
+          <div className={`reading-content${leaving ? " leaving" : ""}`}>
             <header className="intro">
               <p className="eyebrow">{t.eyebrow}</p>
               <h1>{t.introTitle}</h1>
@@ -256,13 +268,13 @@ export default function Home() {
                 <button
                   className="submit-button advance-button"
                   type="button"
-                  onClick={() => setView("writing")}
+                  onClick={goToWriting}
                 >
                   {t.goWrite}
                 </button>
               </>
             )}
-          </>
+          </div>
         )}
       </section>
     </main>
@@ -304,16 +316,17 @@ function PreviousNote({
   return (
     <article className="previous-note">
       <p className="note-eyebrow">{t.someoneWasHere}</p>
-      <dl>
-        <div>
-          <dt>{t.moodLabel}</dt>
-          <dd>{note.mood}</dd>
-        </div>
-        <div>
-          <dt>{t.songLabel}</dt>
-          <dd className="note-message">{songText || t.noSong}</dd>
-        </div>
-      </dl>
+      <p className="note-mood">
+        <span className="sr-only">{t.moodLabel}: </span>
+        {note.mood}
+      </p>
+      {songText && (
+        <p className="note-song">
+          <span className="note-mark" aria-hidden="true">♪</span>
+          <span className="sr-only">{t.songLabel}: </span>
+          {songText}
+        </p>
+      )}
       <p className="disappeared">{t.disappeared}</p>
     </article>
   );
