@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Charging Station — Prototype &amp; Reflection</title>
+<meta name="description" content="A water cooler in the undergraduate branch library, turned into a place to read and leave a little encouragement during exam season." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #fbf7ee;
+    --paper-edge: #f3ecdd;
+    --wall: #efe9dd;
+    --ink: #423b32;
+    --ink-soft: #6f6557;
+    --ink-faint: #a89d8b;
+    --line: rgba(120, 106, 86, 0.16);
+    --accent: #c79a5a;
+    --accent-deep: #a87d3f;
+    --pin: #d98c7a;
+    --shadow: rgba(96, 80, 56, 0.18);
+    --font-hand: "Caveat", cursive;
+    --font-body: "Gowun Dodum", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-note: "Gowun Batang", ui-serif, Georgia, serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    background-color: var(--wall);
+    background-image:
+      radial-gradient(circle at 50% -10%, rgba(255, 251, 242, 0.9), transparent 60%),
+      radial-gradient(circle at 0% 100%, rgba(228, 218, 200, 0.5), transparent 55%),
+      radial-gradient(circle at 100% 90%, rgba(228, 218, 200, 0.45), transparent 55%);
+  }
+
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .shell {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 22px 80px;
+  }
+
+  header.cover {
+    text-align: center;
+    padding: 24px 0 8px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 14px;
+  }
+
+  h1 {
+    font-family: var(--font-hand);
+    font-weight: 700;
+    font-size: clamp(2.6rem, 9vw, 3.8rem);
+    line-height: 1.05;
+    margin: 0 0 10px;
+    color: var(--ink);
+  }
+
+  .subtitle {
+    font-family: var(--font-note);
+    color: var(--ink-soft);
+    font-size: 1.02rem;
+    margin: 0 auto;
+    max-width: 30em;
+  }
+
+  .live-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 26px;
+    padding: 13px 26px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    text-decoration: none;
+    box-shadow: 0 8px 20px var(--shadow);
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+  .live-cta:hover { transform: translateY(-2px); background: #2f2a23; color: var(--paper); }
+  .live-cta .mark { font-size: 1.15rem; }
+
+  section {
+    margin-top: 38px;
+  }
+
+  h2 {
+    font-family: var(--font-hand);
+    font-weight: 700;
+    font-size: 1.85rem;
+    line-height: 1.2;
+    margin: 0 0 12px;
+    color: var(--ink);
+    position: relative;
+    padding-bottom: 8px;
+  }
+  h2::after {
+    content: "";
+    position: absolute;
+    left: 0; bottom: 0;
+    width: 46px; height: 2px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  p { margin: 0 0 14px; }
+  strong { color: var(--ink); }
+  em { color: var(--accent-deep); font-style: normal; font-weight: 700; }
+
+  ul, ol { margin: 0 0 14px; padding-left: 1.25em; }
+  li { margin-bottom: 8px; }
+
+  .lede {
+    font-family: var(--font-note);
+    font-size: 1.08rem;
+  }
+
+  /* Media placeholder — swap the inner content for <img>/<video> later. */
+  figure {
+    margin: 22px 0;
+  }
+  .media {
+    border: 1.5px dashed var(--line);
+    border-radius: 14px;
+    background: var(--paper);
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--ink-faint);
+    font-family: var(--font-note);
+    font-size: 0.95rem;
+    padding: 28px 20px;
+    box-shadow: 0 6px 16px var(--shadow);
+  }
+  .media img, .media video { width: 100%; border-radius: 10px; display: block; }
+  figcaption {
+    margin-top: 8px;
+    text-align: center;
+    color: var(--ink-faint);
+    font-size: 0.86rem;
+    font-family: var(--font-note);
+  }
+
+  /* The four protocol questions, set apart like pinned cards. */
+  .qcard {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin: 16px 0;
+    box-shadow: 0 6px 16px var(--shadow);
+  }
+  .qcard h3 {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--accent-deep);
+    margin: 0 0 8px;
+    font-weight: 700;
+  }
+  .qcard p:last-child { margin-bottom: 0; }
+
+  .reflect {
+    background: rgba(231, 212, 173, 0.22);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 16px 0;
+  }
+  .reflect h2 { margin-top: 0; }
+
+  .note {
+    font-size: 0.9rem;
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+
+  footer {
+    margin-top: 60px;
+    text-align: center;
+    color: var(--ink-faint);
+    font-size: 0.85rem;
+    font-family: var(--font-note);
+  }
+  footer a { color: var(--accent-deep); }
+</style>
+</head>
+<body>
+<main class="shell">
+
+  <header class="cover">
+    <p class="eyebrow">DS1(A) Week 13 · Protocol — Development Phase 2</p>
+    <h1>Charging Station</h1>
+    <p class="subtitle">A water cooler in the undergraduate branch library, turned into a place to read and leave a little encouragement during exam season.</p>
+    <a class="live-cta" href="#" id="live-link">
+      <span class="mark">♪</span> Open the live wall
+    </a>
+  </header>
+
+  <figure>
+    <div class="media">[ photo: the card on the cooler ]</div>
+    <figcaption>The prototype — one hand-written card with a QR code, taped beside the cooler.</figcaption>
+  </figure>
+
+  <section>
+    <h2>The protocol of this site</h2>
+    <p class="lede">Every place has a protocol — a quiet set of rules about how people move, how long they stay, and what they do. The <strong>water cooler in the undergraduate branch library</strong> has a clear one: <em>come, fill your cup, and leave.</em></p>
+    <p>People do it alone. They do it in silence. It takes about five seconds, and no one looks at anyone. During exam time the protocol is even stronger — tired students come on autopilot, fill water, and go back to studying. Everyone is tired in the same way, but no one shows it and no one shares it.</p>
+  </section>
+
+  <section>
+    <h2>From a failure to this site</h2>
+    <p>My first try was in the <strong>Creative Learning Building</strong>. The idea looked okay, but the place was wrong. People stayed in the room, but they had no reason to stop and leave something. There was no moment when their hands were free, so almost no one used it.</p>
+    <p>That failure taught me what I needed: <strong>a place where people already stop for a few seconds, with nothing in their hands.</strong> That is exactly the water cooler. I don't have to make people pause — the protocol of the place already does it. So I didn't build a new space. I added one small thing on top of a habit that was already there: the place where you fill water becomes the place where you fill yourself.</p>
+  </section>
+
+  <section>
+    <h2>The four questions</h2>
+
+    <div class="qcard">
+      <h3>What is the protocol of this site?</h3>
+      <p>Come, fill your cup, and leave — alone, in silence, in about five seconds. During exam season everyone arrives tired in the same way, but no one shows it or shares it.</p>
+    </div>
+
+    <div class="qcard">
+      <h3>What did you want to change, reveal, or make visible?</h3>
+      <p>One thing: <em>you are not the only tired person standing here.</em> I wanted to keep the quiet, but turn the lonely five seconds into a small shared moment — a place to get a little encouragement, leave a little for the next person, and pass on one song.</p>
+    </div>
+
+    <div class="qcard">
+      <h3>Why this addition, and not something else?</h3>
+      <p>A sign would only be read once and changes nothing. A paper guestbook would feel exposed and need supplies and cleaning. But a <strong>QR code + the wall on your own phone</strong> fits the protocol perfectly: it lives in the five-second pause, stays private on your screen, is anonymous, and <strong>grows over time</strong> instead of staying still. It adds to the habit without breaking the silence.</p>
+    </div>
+
+    <div class="qcard">
+      <h3>What impact did it bring?</h3>
+      <p class="note">[ Fill after the real run. Answer with what you actually see: how many notes and songs were left, how much thicker the wall got from day 1 to the last day, and whether anyone slowed down, smiled, or stayed a little longer than the usual five seconds. ]</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>What I installed</h2>
+    <p>I made the simplest version. Just one hand-written card with a QR code, taped next to the cooler at eye level. The web app (the wall) was already working behind the QR. No fancy sign, no long instructions, only one line. I didn't want it to look finished — I just wanted to find out fast what works and what doesn't.</p>
+    <figure>
+      <div class="media">[ screenshot: the wall on day 1 ]</div>
+      <figcaption>The wall on the first day.</figcaption>
+    </figure>
+  </section>
+
+  <section class="reflect">
+    <h2>Did it work as intended?</h2>
+    <p class="note">[ Fill this part after you watch real people. Things to answer: ]</p>
+    <ul>
+      <li>Did people <strong>see</strong> the card while the water was filling? Or did they only look at the water / their phone?</li>
+      <li>Of the people who saw it, how many <strong>scanned</strong> it? How many only <strong>read</strong> the wall, and how many actually <strong>left</strong> a note?</li>
+      <li>Where did they <strong>stop</strong> — at the QR, at the wall, or at "pick a song"?</li>
+    </ul>
+    <p>One thing is already clear. In the Creative Learning Building, I had to give people a reason to stop. At the cooler, the protocol gives me that pause for free.</p>
+  </section>
+
+  <section class="reflect">
+    <h2>Is the idea still right, or did the prototype reveal something better?</h2>
+    <p>The pivot was right. Last time the place was the problem, not the idea. But the second prototype probably shows smaller problems:</p>
+    <ul>
+      <li><strong>Five seconds is short.</strong> The cup fills before anyone can read a long sentence. So the card needs to say <strong>less</strong> — one short line, not a paragraph.</li>
+      <li><strong>Reading might be the main thing, not writing.</strong> If many people read but few write, that's okay. A full wall makes you want to join; an empty wall pushes you away. So maybe the real point is "give tired people something nice to read," and writing is just a bonus.</li>
+      <li><strong>Where I put the card matters more than the words.</strong> The best spot is exactly where the eyes look while the water is filling.</li>
+    </ul>
+  </section>
+
+  <section class="reflect">
+    <h2>What will you change before the real execution?</h2>
+    <ol>
+      <li><strong>Make the card shorter</strong> — one line + QR. Put all the explanation inside the page, not on the card.</li>
+      <li><strong>Put some notes on the wall first</strong>, so the first person doesn't see an empty wall (the empty-room problem from my first try).</li>
+      <li><strong>Move the card next to the water</strong>, on the line where people look while the cup fills.</li>
+      <li><strong>Show the wall first</strong> when the page opens. Writing is one easy tap below it.</li>
+      <li><strong>(Maybe) try two coolers</strong>, to see which spot works better.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>The webpage — record, or part of the project?</h2>
+    <p>This decides if the page is worth making. My answer: <strong>it is part of the project, not just a record.</strong></p>
+    <p>A "record" page would be one photo of the cooler and one paragraph about what I did. But the page someone opens <em>while standing at the cooler, with water filling and a phone in their hand</em> — that page <strong>is</strong> the project. It's not a photo of the encouragement. It's the place the encouragement lives. So the page has two jobs:</p>
+    <ul>
+      <li><strong>For the person at the cooler:</strong> the live wall. Read what others left, and add your own, in the five seconds you have.</li>
+      <li><strong>For someone visiting later from anywhere:</strong> the same wall, still growing. It shows the encouragement didn't stop when I took the card down.</li>
+    </ul>
+    <p>This also matters for presentation day. When the class walks to the cooler and opens the URL on their phones, they don't just see a report — they <strong>stand inside the protocol</strong> and add to the wall themselves.</p>
+    <p>What do they get that they wouldn't have without it? At a normal cooler, your turn ends when the cup is full. But with the page open, <strong>the cup fills and you fill too.</strong> You leave with a stranger's song, and you know the next tired person will find yours.</p>
+    <figure>
+      <div class="media">[ video: someone scanning + the wall thicker on the last day ]</div>
+      <figcaption>Day 1 vs. the final day — the wall grows.</figcaption>
+    </figure>
+  </section>
+
+  <footer>
+    <p>Charging Station · a site-specific gesture at the undergraduate branch library water cooler.<br />
+    <a href="#" id="live-link-foot">Open the live wall →</a></p>
+  </footer>
+
+</main>
+
+<script>
+  // Put your deployed wall URL here once, and both buttons update.
+  var LIVE_WALL_URL = "https://you-found-something.vercel.app/";
+  var a = document.getElementById("live-link");
+  var b = document.getElementById("live-link-foot");
+  if (a) a.href = LIVE_WALL_URL;
+  if (b) b.href = LIVE_WALL_URL;
+</script>
+</body>
+</html>
