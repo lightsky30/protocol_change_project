@@ -9,8 +9,7 @@ type Copy = {
   toggleLabel: string;
   // intro / wall header
   eyebrow: string;
-  introTitle: string;
-  introBody: string;
+  intro: string;
   // wall states
   looking: string;
   errorTitle: string;
@@ -47,9 +46,7 @@ export const translations: Record<Language, Copy> = {
     toggleAria: "언어 바꾸기",
     toggleLabel: "EN",
     eyebrow: "모두가 남긴 응원의 벽",
-    introTitle: "여기 모인 한 마디와 음악",
-    introBody:
-      "앞서 다녀간 사람들이 남긴 응원과 음악이 그대로 붙어 있어요. 당신의 한 마디도 더해 주세요.",
+    intro: "지나간 사람들이 남긴 말과 음악이에요. 당신 것도 더해주세요.",
     looking: "벽을 불러오는 중…",
     errorTitle: "벽을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.",
     retry: "다시 시도하기",
@@ -80,9 +77,7 @@ export const translations: Record<Language, Copy> = {
     toggleAria: "Change language",
     toggleLabel: "한국어",
     eyebrow: "a wall of everyone's notes",
-    introTitle: "Words and music, left here together",
-    introBody:
-      "Every word of luck and song left by the people before you stays pinned here. Add yours to the wall.",
+    intro: "Words and music left by the people who came before. Add yours too.",
     looking: "Loading the wall…",
     errorTitle: "Couldn't load the wall. Try again in a moment.",
     retry: "Try again",

@@ -238,8 +238,7 @@ export default function Home() {
 
       <header className="wall-header">
         <p className="eyebrow">{t.eyebrow}</p>
-        <h1>{t.introTitle}</h1>
-        <p className="intro-body">{t.introBody}</p>
+        <h1 className="wall-intro">{t.intro}</h1>
         {loadState === "ready" && notes.length > 0 && (
           <p className="wall-count">{t.countLabel(notes.length)}</p>
         )}

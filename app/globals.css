@@ -860,8 +860,15 @@ textarea::placeholder {
   text-align: center;
 }
 
-.wall-header .intro-body {
+/* a single warm line in the handwriting font (Gaegu / Caveat per language —
+   inherited from the h1 rules), just sized down to fit the longer sentence.
+   the compound selector outweighs the base `html[lang="ko"] h1` sizing. */
+.wall-header .wall-intro {
   margin: 0;
+  font-size: clamp(1.7rem, 6.5vw, 2.2rem);
+  line-height: 1.4;
+  letter-spacing: 0;
+  color: var(--ink);
 }
 
 .wall-count {
