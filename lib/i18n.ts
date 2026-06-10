@@ -7,25 +7,23 @@ type Copy = {
   // language toggle
   toggleAria: string;
   toggleLabel: string;
-  // intro
+  // intro / wall header
   eyebrow: string;
   introTitle: string;
   introBody: string;
-  // load states
+  // wall states
   looking: string;
   errorTitle: string;
   retry: string;
-  // previous note
-  someoneWasHere: string;
+  emptyWall: string;
+  countLabel: (n: number) => string;
+  loadMore: string;
+  // note labels (screen-reader)
   moodLabel: string;
   songLabel: string;
-  noSong: string;
-  disappeared: string;
-  emptyWall: string;
-  // reading -> writing step
-  goWrite: string;
-  back: string;
-  // form
+  // compose
+  openCompose: string;
+  closeCompose: string;
   formTitle: string;
   formSubtitle: string;
   moodField: string;
@@ -34,20 +32,13 @@ type Copy = {
   songPlaceholder: string;
   searching: string;
   noResults: string;
-  searchHint: string;
-  selectedSong: string;
   clearSong: string;
   pinButton: string;
   pinning: string;
-  // confirmation
-  confirmEyebrow: string;
-  confirmTitle: string;
-  confirmBody: string;
   // errors
   errNotConfigured: string;
-  errOpenBox: string;
+  errLoadWall: string;
   errNeedMoodSong: string;
-  errAlreadyWaiting: string;
   errGeneric: string;
 };
 
@@ -55,81 +46,67 @@ export const translations: Record<Language, Copy> = {
   ko: {
     toggleAria: "언어 바꾸기",
     toggleLabel: "EN",
-    eyebrow: "조용한 벽 한 켠",
-    introTitle: "당신은 이곳을 발견했어요.",
-    introBody: "쪽지는 하나만 머물고, 읽히면 사라집니다.",
-    looking: "쪽지를 찾는 중…",
-    errorTitle: "쪽지함을 열 수 없었어요. 잠시 뒤 다시 시도해 주세요.",
+    eyebrow: "모두가 남긴 응원의 벽",
+    introTitle: "여기 모인 한 마디와 음악",
+    introBody:
+      "앞서 다녀간 사람들이 남긴 응원과 음악이 그대로 붙어 있어요. 당신의 한 마디도 더해 주세요.",
+    looking: "벽을 불러오는 중…",
+    errorTitle: "벽을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.",
     retry: "다시 시도하기",
-    someoneWasHere: "누군가 먼저 다녀갔어요",
-    moodLabel: "기분",
-    songLabel: "노래",
-    noSong: "노래는 없어요",
-    disappeared: "이 쪽지는 사라졌어요.",
-    emptyWall: "아직 이 벽엔 쪽지가 없어요. 당신이 처음이에요.",
-    goWrite: "다음 쪽지 남기기",
-    back: "← 돌아가기",
-    formTitle: "한 장 남겨 주세요.",
-    formSubtitle: "읽히면 사라집니다.",
-    moodField: "기분",
-    moodPlaceholder: "다음 사람을 위한 한 마디…",
-    songField: "노래",
-    songPlaceholder: "노래 제목이나 가수를 검색하세요",
+    emptyWall: "아직 남겨진 응원이 없어요. 당신이 처음으로 남겨 보세요.",
+    countLabel: (n) => `지금까지 ${n}개의 응원이 모였어요`,
+    loadMore: "이전 응원 더 보기",
+    moodLabel: "응원 한 마디",
+    songLabel: "음악",
+    openCompose: "나도 한 마디 남기기",
+    closeCompose: "닫기",
+    formTitle: "다음 사람에게 남기는 한 마디",
+    formSubtitle: "당신의 응원과 음악이 벽에 함께 붙어요.",
+    moodField: "응원 한 마디",
+    moodPlaceholder: "시험 잘 보라고, 따뜻한 한 마디…",
+    songField: "힘이 되는 노래",
+    songPlaceholder: "힘이 되는 노래를 검색하세요",
     searching: "찾는 중…",
     noResults: "검색 결과가 없어요.",
-    searchHint: "검색해서 노래를 골라 주세요.",
-    selectedSong: "고른 노래",
     clearSong: "다시 고르기",
     pinButton: "벽에 붙이기",
-    pinning: "벽에 붙이는 중…",
-    confirmEyebrow: "남겨졌어요",
-    confirmTitle: "당신의 쪽지가 이제 다음 사람을 기다려요.",
-    confirmBody: "이 페이지를 닫아도 좋아요. 벽 한 켠은 다시 조용해졌어요.",
+    pinning: "붙이는 중…",
     errNotConfigured: "아직 연결이 준비되지 않았어요.",
-    errOpenBox: "쪽지함을 열 수 없었어요. 잠시 뒤 조용히 다시 시도해 주세요.",
-    errNeedMoodSong: "기분과 노래를 남겨 주세요.",
-    errAlreadyWaiting:
-      "다른 쪽지가 이미 기다리고 있어요. 새로고침하면 다시 열 수 있어요.",
-    errGeneric: "쪽지를 남기지 못했어요. 다시 시도해 주세요."
+    errLoadWall: "벽을 불러올 수 없었어요. 잠시 뒤 다시 시도해 주세요.",
+    errNeedMoodSong: "응원 한 마디와 노래를 남겨 주세요.",
+    errGeneric: "응원을 남기지 못했어요. 다시 시도해 주세요."
   },
   en: {
     toggleAria: "Change language",
     toggleLabel: "한국어",
-    eyebrow: "a quiet corner of the wall",
-    introTitle: "You found this place.",
-    introBody: "One note rests here. Once read, it disappears.",
-    looking: "Looking for a note…",
-    errorTitle: "The note box couldn't be opened. Try again in a moment.",
+    eyebrow: "a wall of everyone's notes",
+    introTitle: "Words and music, left here together",
+    introBody:
+      "Every word of luck and song left by the people before you stays pinned here. Add yours to the wall.",
+    looking: "Loading the wall…",
+    errorTitle: "Couldn't load the wall. Try again in a moment.",
     retry: "Try again",
-    someoneWasHere: "someone was here before you",
-    moodLabel: "mood",
-    songLabel: "song",
-    noSong: "no song",
-    disappeared: "This note is gone now.",
-    emptyWall: "No note on this wall yet. You're the first.",
-    goWrite: "leave the next note",
-    back: "← go back",
-    formTitle: "Leave one note.",
-    formSubtitle: "Once read, it disappears.",
-    moodField: "mood",
-    moodPlaceholder: "a word for the next person…",
-    songField: "song",
-    songPlaceholder: "search a song title or artist",
+    emptyWall: "No notes here yet. Be the first to leave one.",
+    countLabel: (n) => `${n} ${n === 1 ? "note" : "notes"} so far`,
+    loadMore: "Show earlier notes",
+    moodLabel: "a word of luck",
+    songLabel: "music",
+    openCompose: "leave your note too",
+    closeCompose: "close",
+    formTitle: "A word for the next person",
+    formSubtitle: "Your note and song get pinned to the wall.",
+    moodField: "a word of luck",
+    moodPlaceholder: "a warm word — good luck on your exam…",
+    songField: "a song to keep you going",
+    songPlaceholder: "search a song that gives strength",
     searching: "searching…",
     noResults: "No results found.",
-    searchHint: "Search and pick a song.",
-    selectedSong: "your pick",
     clearSong: "pick again",
     pinButton: "pin it to the wall",
     pinning: "pinning it up…",
-    confirmEyebrow: "left behind",
-    confirmTitle: "Your note now waits for the next person.",
-    confirmBody: "You can close this page. The corner is quiet again.",
     errNotConfigured: "The connection isn't ready yet.",
-    errOpenBox: "The note box couldn't be opened. Try again quietly in a moment.",
-    errNeedMoodSong: "Leave a mood and a song.",
-    errAlreadyWaiting:
-      "Another note is already waiting. Refresh to open the wall again.",
+    errLoadWall: "The wall couldn't be loaded. Try again in a moment.",
+    errNeedMoodSong: "Leave a word of luck and a song.",
     errGeneric: "Your note couldn't be left here. Please try again."
   }
 };

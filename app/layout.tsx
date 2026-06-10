@@ -3,9 +3,9 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "벽에 남겨진 쪽지 · A note left on the wall",
+  title: "책상에 남겨진 응원 · A note of luck left on the desk",
   description:
-    "한 사람을 위한, 잠시 머무는 쪽지. A quiet note that waits here for one stranger at a time."
+    "시험을 앞둔 다음 사람을 위한, 잠시 머무는 응원. A quiet word of luck that waits here for the next student before an exam."
 };
 
 export const viewport: Viewport = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { MusicResult } from "@/app/api/music/search/route";
 import { isSupabaseConfigured, SecretNote, supabase } from "@/lib/supabase";
 import {
@@ -11,25 +11,38 @@ import {
 } from "@/lib/i18n";
 
 type LoadState = "loading" | "ready" | "error";
-type SubmitState = "idle" | "submitting" | "submitted";
-type View = "reading" | "writing";
+type SubmitState = "idle" | "submitting";
 type SearchState = "idle" | "searching" | "done";
 
-let initialClaimStarted = false;
+// Error keys are the subset of copy that holds a plain string message.
+type ErrorKey =
+  | "errNotConfigured"
+  | "errLoadWall"
+  | "errNeedMoodSong"
+  | "errGeneric"
+  | "";
+
+// How many notes to pull per page when loading the wall.
+const PAGE_SIZE = 60;
+
+let initialLoadStarted = false;
 
 export default function Home() {
   const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE);
   const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [notes, setNotes] = useState<SecretNote[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadError, setLoadError] = useState<ErrorKey>("");
+
+  // compose modal
+  const [composeOpen, setComposeOpen] = useState(false);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
-  const [view, setView] = useState<View>("reading");
-  const [waitingNote, setWaitingNote] = useState<SecretNote | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [formError, setFormError] = useState<ErrorKey>("");
   const [mood, setMood] = useState("");
   const [songQuery, setSongQuery] = useState("");
   const [songResults, setSongResults] = useState<MusicResult[]>([]);
   const [searchState, setSearchState] = useState<SearchState>("idle");
   const [selectedSong, setSelectedSong] = useState<MusicResult | null>(null);
-  const [leaving, setLeaving] = useState(false);
   const submittedRef = useRef(false);
 
   const t = translations[language];
@@ -87,42 +100,77 @@ export default function Home() {
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, next);
   }
 
-  // errorMessage holds a translation key so the text re-translates when the
-  // language changes.
-  function setError(key: keyof typeof translations.ko | "") {
-    setErrorMessage(key);
-  }
-
-  async function claimWaitingNote() {
+  // Load a page of notes. `from === 0` replaces the wall; otherwise it appends
+  // older notes, de-duplicating by id so an optimistically-added note can't
+  // show up twice.
+  const loadNotes = useCallback(async (from: number) => {
     if (!supabase) {
-      setError("errNotConfigured");
+      setLoadError("errNotConfigured");
       setLoadState("error");
       return;
     }
 
-    setLoadState("loading");
-    setError("");
+    if (from === 0) setLoadState("loading");
+    setLoadError("");
 
-    // The RPC deletes and returns one row in a single database operation,
-    // so two visitors cannot read the same waiting note.
-    const { data, error } = await supabase.rpc("claim_oldest_secret_note");
+    const { data, error } = await supabase
+      .from("secret_notes")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
 
     if (error) {
-      setWaitingNote(null);
-      setError("errOpenBox");
-      setLoadState("error");
+      setLoadError("errLoadWall");
+      if (from === 0) setLoadState("error");
       return;
     }
 
-    setWaitingNote(data?.[0] ?? null);
+    const rows = data ?? [];
+    setNotes((prev) => {
+      if (from === 0) return rows;
+      const seen = new Set(prev.map((note) => note.id));
+      return [...prev, ...rows.filter((note) => !seen.has(note.id))];
+    });
+    setHasMore(rows.length === PAGE_SIZE);
     setLoadState("ready");
-  }
+  }, []);
 
   useEffect(() => {
-    if (initialClaimStarted) return;
-    initialClaimStarted = true;
-    void claimWaitingNote();
-  }, []);
+    if (initialLoadStarted) return;
+    initialLoadStarted = true;
+    void loadNotes(0);
+  }, [loadNotes]);
+
+  function openCompose() {
+    setFormError("");
+    setComposeOpen(true);
+  }
+
+  function closeCompose() {
+    if (submitState === "submitting") return;
+    setComposeOpen(false);
+  }
+
+  // Close the modal on Escape for keyboard users.
+  useEffect(() => {
+    if (!composeOpen) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") closeCompose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [composeOpen, submitState]);
+
+  function resetForm() {
+    submittedRef.current = false;
+    setMood("");
+    setSongQuery("");
+    setSelectedSong(null);
+    setSongResults([]);
+    setSearchState("idle");
+    setFormError("");
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -132,55 +180,49 @@ export default function Home() {
     const trimmedMood = mood.trim();
 
     if (!trimmedMood || !selectedSong) {
-      setError("errNeedMoodSong");
+      setFormError("errNeedMoodSong");
       return;
     }
 
     if (!supabase) {
-      setError("errNotConfigured");
+      setFormError("errNotConfigured");
       return;
     }
 
     submittedRef.current = true;
     setSubmitState("submitting");
-    setError("");
+    setFormError("");
 
     // A note is a mood + a song picked from search. The display text also goes
     // into the required `message` column so the NOT NULL constraint holds, and
     // the structured title/url are kept for richer rendering and linking.
     const songTitle = `${selectedSong.title} — ${selectedSong.artist}`;
-    const { error } = await supabase.from("secret_notes").insert({
-      mood: trimmedMood,
-      message: songTitle,
-      music_title: songTitle,
-      music_url: selectedSong.url || null
-    });
+    const { data, error } = await supabase
+      .from("secret_notes")
+      .insert({
+        mood: trimmedMood,
+        message: songTitle,
+        music_title: songTitle,
+        music_url: selectedSong.url || null
+      })
+      .select()
+      .single();
 
-    if (error) {
+    if (error || !data) {
       submittedRef.current = false;
       setSubmitState("idle");
-      setError(error.code === "23505" ? "errAlreadyWaiting" : "errGeneric");
+      setFormError("errGeneric");
       return;
     }
 
-    setSubmitState("submitted");
+    // Pin the new note to the top of the wall right away.
+    setNotes((prev) => [data, ...prev]);
+    setSubmitState("idle");
+    setComposeOpen(false);
+    resetForm();
   }
 
-  // Reading "consumes" the note: it tears off the wall like a peeled post-it
-  // before the writing view opens.
-  function goToWriting() {
-    if (leaving) return;
-    setLeaving(true);
-    window.setTimeout(() => {
-      setError("");
-      setView("writing");
-      setLeaving(false);
-    }, 1080);
-  }
-
-  const resolvedError = errorMessage
-    ? (t[errorMessage as keyof typeof t] as string) || ""
-    : "";
+  const resolvedFormError = formError ? (t[formError] as string) : "";
 
   const toggle = (
     <LanguageToggle
@@ -190,215 +232,94 @@ export default function Home() {
     />
   );
 
-  if (submitState === "submitted") {
-    return (
-      <main className="page-shell">
-        {toggle}
-        <section key="note-pinned" className="paper confirmation" aria-live="polite">
-          <span className="pin" aria-hidden="true" />
-          <p className="eyebrow">{t.confirmEyebrow}</p>
-          <h1 className="confirm-title">{t.confirmTitle}</h1>
-          <p className="soft-copy">{t.confirmBody}</p>
-        </section>
-      </main>
-    );
-  }
-
   return (
-    <main className="page-shell">
+    <main className="wall-shell">
       {toggle}
 
-      <section key="note-wall" className="paper">
-        <span className="pin" aria-hidden="true" />
+      <header className="wall-header">
+        <p className="eyebrow">{t.eyebrow}</p>
+        <h1>{t.introTitle}</h1>
+        <p className="intro-body">{t.introBody}</p>
+        {loadState === "ready" && notes.length > 0 && (
+          <p className="wall-count">{t.countLabel(notes.length)}</p>
+        )}
+      </header>
 
-        {view === "writing" ? (
+      {loadState === "loading" && (
+        <div className="status-card" aria-live="polite">
+          <span className="pulse-dot" aria-hidden="true" />
+          {t.looking}
+        </div>
+      )}
+
+      {loadState === "error" && (
+        <div className="status-card warning" role="alert">
+          <p>{loadError ? (t[loadError] as string) : t.errorTitle}</p>
+          <button
+            className="quiet-button"
+            type="button"
+            onClick={() => loadNotes(0)}
+          >
+            {t.retry}
+          </button>
+        </div>
+      )}
+
+      {loadState === "ready" &&
+        (notes.length > 0 ? (
           <>
-            <button
-              className="back-link"
-              type="button"
-              onClick={() => {
-                setError("");
-                setView("reading");
-              }}
-            >
-              {t.back}
-            </button>
+            <section className="note-grid" aria-label={t.eyebrow}>
+              {notes.map((note) => (
+                <NoteCard key={note.id} note={note} t={t} />
+              ))}
+            </section>
 
-            <form className="note-form" onSubmit={handleSubmit}>
-              <div className="form-heading">
-                <h2>{t.formTitle}</h2>
-                <p>{t.formSubtitle}</p>
-              </div>
-
-              <label>
-                <span>{t.moodField}</span>
-                <input
-                  autoComplete="off"
-                  maxLength={80}
-                  onChange={(event) => setMood(event.target.value)}
-                  placeholder={t.moodPlaceholder}
-                  required
-                  value={mood}
-                />
-              </label>
-
-              <div className="song-field">
-                <span className="song-field-label">{t.songField}</span>
-
-                {selectedSong ? (
-                  <div className="selected-song">
-                    {selectedSong.artwork && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        className="song-art"
-                        src={selectedSong.artwork}
-                        alt=""
-                        width={48}
-                        height={48}
-                      />
-                    )}
-                    <span className="song-meta">
-                      <span className="song-title">{selectedSong.title}</span>
-                      <span className="song-artist">{selectedSong.artist}</span>
-                    </span>
-                    <button
-                      className="song-clear"
-                      type="button"
-                      onClick={() => {
-                        setSelectedSong(null);
-                        setSongQuery("");
-                      }}
-                    >
-                      {t.clearSong}
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <input
-                      autoComplete="off"
-                      maxLength={120}
-                      onChange={(event) => setSongQuery(event.target.value)}
-                      placeholder={t.songPlaceholder}
-                      value={songQuery}
-                    />
-
-                    {searchState === "searching" && (
-                      <p className="song-status">{t.searching}</p>
-                    )}
-
-                    {searchState === "done" && songResults.length === 0 && (
-                      <p className="song-status">{t.noResults}</p>
-                    )}
-
-                    {songResults.length > 0 && (
-                      <ul className="song-results">
-                        {songResults.map((result) => (
-                          <li key={result.id}>
-                            <button
-                              className="song-result"
-                              type="button"
-                              onClick={() => {
-                                setSelectedSong(result);
-                                setError("");
-                              }}
-                            >
-                              {result.artwork && (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  className="song-art"
-                                  src={result.artwork}
-                                  alt=""
-                                  width={40}
-                                  height={40}
-                                />
-                              )}
-                              <span className="song-meta">
-                                <span className="song-title">
-                                  {result.title}
-                                </span>
-                                <span className="song-artist">
-                                  {result.artist}
-                                </span>
-                              </span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {resolvedError && (
-                <p className="form-error" role="alert">
-                  {resolvedError}
-                </p>
-              )}
-
+            {hasMore && (
               <button
-                className="submit-button"
-                disabled={
-                  !isSupabaseConfigured ||
-                  submitState === "submitting" ||
-                  !mood.trim() ||
-                  !selectedSong
-                }
-                type="submit"
+                className="quiet-button load-more"
+                type="button"
+                onClick={() => loadNotes(notes.length)}
               >
-                {submitState === "submitting" ? t.pinning : t.pinButton}
+                {t.loadMore}
               </button>
-            </form>
+            )}
           </>
         ) : (
-          <div className={`reading-content${leaving ? " leaving" : ""}`}>
-            <header className="intro">
-              <p className="eyebrow">{t.eyebrow}</p>
-              <h1>{t.introTitle}</h1>
-              <p className="intro-body">{t.introBody}</p>
-            </header>
-
-            {loadState === "loading" && (
-              <div className="status-card" aria-live="polite">
-                <span className="pulse-dot" aria-hidden="true" />
-                {t.looking}
-              </div>
-            )}
-
-            {loadState === "error" && (
-              <div className="status-card warning" role="alert">
-                <p>{t.errorTitle}</p>
-                <button
-                  className="quiet-button"
-                  type="button"
-                  onClick={claimWaitingNote}
-                >
-                  {t.retry}
-                </button>
-              </div>
-            )}
-
-            {loadState === "ready" && (
-              <>
-                {waitingNote ? (
-                  <PreviousNote note={waitingNote} t={t} />
-                ) : (
-                  <div className="status-card empty-state">
-                    <p>{t.emptyWall}</p>
-                  </div>
-                )}
-
-                <button
-                  className="submit-button advance-button"
-                  type="button"
-                  onClick={goToWriting}
-                >
-                  {t.goWrite}
-                </button>
-              </>
-            )}
+          <div className="status-card empty-state">
+            <p>{t.emptyWall}</p>
           </div>
-        )}
-      </section>
+        ))}
+
+      <button
+        className="compose-fab"
+        type="button"
+        onClick={openCompose}
+        disabled={!isSupabaseConfigured}
+      >
+        <span className="compose-fab-mark" aria-hidden="true">
+          ✎
+        </span>
+        {t.openCompose}
+      </button>
+
+      {composeOpen && (
+        <ComposeModal
+          t={t}
+          mood={mood}
+          setMood={setMood}
+          songQuery={songQuery}
+          setSongQuery={setSongQuery}
+          songResults={songResults}
+          searchState={searchState}
+          selectedSong={selectedSong}
+          setSelectedSong={setSelectedSong}
+          submitState={submitState}
+          error={resolvedFormError}
+          clearError={() => setFormError("")}
+          onClose={closeCompose}
+          onSubmit={handleSubmit}
+        />
+      )}
     </main>
   );
 }
@@ -424,27 +345,46 @@ function LanguageToggle({
   );
 }
 
-function PreviousNote({
+// A small deterministic tilt so each pinned note leans slightly differently
+// while staying stable across re-renders.
+function tiltFor(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  const deg = ((hash % 500) / 100 - 2.5).toFixed(2);
+  const tint = hash % 4;
+  return { deg, tint };
+}
+
+function NoteCard({
   note,
   t
 }: {
   note: SecretNote;
   t: (typeof translations)[Language];
 }) {
-  // New notes store the song in `message`; older notes may still have it in
-  // `music_title`. Prefer whichever holds the song.
+  // New notes store the song in `music_title`; older notes may still have it
+  // in `message`. Prefer whichever holds the song.
   const songText = note.music_title || note.message;
+  const { deg, tint } = tiltFor(note.id);
 
   return (
-    <article className="previous-note">
-      <p className="note-eyebrow">{t.someoneWasHere}</p>
+    <article
+      className="note-card"
+      data-tint={tint}
+      style={{ ["--tilt" as string]: `${deg}deg` }}
+    >
+      <span className="note-tape" aria-hidden="true" />
       <p className="note-mood">
         <span className="sr-only">{t.moodLabel}: </span>
         {note.mood}
       </p>
       {songText && (
         <p className="note-song">
-          <span className="note-mark" aria-hidden="true">♪</span>
+          <span className="note-mark" aria-hidden="true">
+            ♪
+          </span>
           <span className="sr-only">{t.songLabel}: </span>
           {note.music_url ? (
             <a
@@ -460,7 +400,185 @@ function PreviousNote({
           )}
         </p>
       )}
-      <p className="disappeared">{t.disappeared}</p>
     </article>
+  );
+}
+
+function ComposeModal({
+  t,
+  mood,
+  setMood,
+  songQuery,
+  setSongQuery,
+  songResults,
+  searchState,
+  selectedSong,
+  setSelectedSong,
+  submitState,
+  error,
+  clearError,
+  onClose,
+  onSubmit
+}: {
+  t: (typeof translations)[Language];
+  mood: string;
+  setMood: (value: string) => void;
+  songQuery: string;
+  setSongQuery: (value: string) => void;
+  songResults: MusicResult[];
+  searchState: SearchState;
+  selectedSong: MusicResult | null;
+  setSelectedSong: (song: MusicResult | null) => void;
+  submitState: SubmitState;
+  error: string;
+  clearError: () => void;
+  onClose: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <div
+      className="compose-backdrop"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        className="compose-modal paper"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t.formTitle}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <span className="pin" aria-hidden="true" />
+
+        <button
+          className="back-link compose-close"
+          type="button"
+          onClick={onClose}
+        >
+          {t.closeCompose}
+        </button>
+
+        <form className="note-form" onSubmit={onSubmit}>
+          <div className="form-heading">
+            <h2>{t.formTitle}</h2>
+            <p>{t.formSubtitle}</p>
+          </div>
+
+          <label>
+            <span>{t.moodField}</span>
+            <input
+              autoComplete="off"
+              maxLength={80}
+              onChange={(event) => setMood(event.target.value)}
+              placeholder={t.moodPlaceholder}
+              required
+              value={mood}
+            />
+          </label>
+
+          <div className="song-field">
+            <span className="song-field-label">{t.songField}</span>
+
+            {selectedSong ? (
+              <div className="selected-song">
+                {selectedSong.artwork && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    className="song-art"
+                    src={selectedSong.artwork}
+                    alt=""
+                    width={48}
+                    height={48}
+                  />
+                )}
+                <span className="song-meta">
+                  <span className="song-title">{selectedSong.title}</span>
+                  <span className="song-artist">{selectedSong.artist}</span>
+                </span>
+                <button
+                  className="song-clear"
+                  type="button"
+                  onClick={() => {
+                    setSelectedSong(null);
+                    setSongQuery("");
+                  }}
+                >
+                  {t.clearSong}
+                </button>
+              </div>
+            ) : (
+              <>
+                <input
+                  autoComplete="off"
+                  maxLength={120}
+                  onChange={(event) => setSongQuery(event.target.value)}
+                  placeholder={t.songPlaceholder}
+                  value={songQuery}
+                />
+
+                {searchState === "searching" && (
+                  <p className="song-status">{t.searching}</p>
+                )}
+
+                {searchState === "done" && songResults.length === 0 && (
+                  <p className="song-status">{t.noResults}</p>
+                )}
+
+                {songResults.length > 0 && (
+                  <ul className="song-results">
+                    {songResults.map((result) => (
+                      <li key={result.id}>
+                        <button
+                          className="song-result"
+                          type="button"
+                          onClick={() => {
+                            setSelectedSong(result);
+                            clearError();
+                          }}
+                        >
+                          {result.artwork && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              className="song-art"
+                              src={result.artwork}
+                              alt=""
+                              width={40}
+                              height={40}
+                            />
+                          )}
+                          <span className="song-meta">
+                            <span className="song-title">{result.title}</span>
+                            <span className="song-artist">{result.artist}</span>
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+          </div>
+
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <button
+            className="submit-button"
+            disabled={
+              !isSupabaseConfigured ||
+              submitState === "submitting" ||
+              !mood.trim() ||
+              !selectedSong
+            }
+            type="submit"
+          >
+            {submitState === "submitting" ? t.pinning : t.pinButton}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }

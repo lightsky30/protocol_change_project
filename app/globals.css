@@ -840,3 +840,230 @@ textarea::placeholder {
     padding: 2.8rem 2.4rem 2.4rem;
   }
 }
+
+/* ====================================================================
+   The wall: every note left behind stays pinned, side by side.
+   ==================================================================== */
+
+.wall-shell {
+  position: relative;
+  width: 100%;
+  max-width: 72rem;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 4.5rem 1.25rem 7rem;
+}
+
+.wall-header {
+  max-width: 34rem;
+  margin: 0 auto 2.2rem;
+  text-align: center;
+}
+
+.wall-header .intro-body {
+  margin: 0;
+}
+
+.wall-count {
+  margin: 0.7rem 0 0;
+  color: var(--ink-faint);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+}
+
+/* loading / error / empty cards stay narrow and centered on the wide wall */
+.wall-shell > .status-card {
+  max-width: 34rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---- the grid of pinned notes (CSS columns = light masonry) ---- */
+.note-grid {
+  columns: 15.5rem;
+  column-gap: 1.1rem;
+  margin: 0 auto;
+}
+
+.note-card {
+  position: relative;
+  width: 100%;
+  margin: 0 0 1.1rem;
+  padding: 1.45rem 1.3rem 1.2rem;
+  border-radius: 0.5rem;
+  background: #fffdf6;
+  break-inside: avoid;
+  box-shadow:
+    0 0.6rem 1.4rem rgba(96, 80, 56, 0.16),
+    inset 0 0 0 1px rgba(120, 106, 86, 0.06);
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  animation: card-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* a few warm paper tints so the wall feels hand-assembled */
+.note-card[data-tint="1"] {
+  background: #fdf4e8;
+}
+.note-card[data-tint="2"] {
+  background: #f3f6ec;
+}
+.note-card[data-tint="3"] {
+  background: #fdeff0;
+}
+
+.note-card:hover {
+  transform: rotate(var(--tilt, 0deg)) translateY(-0.25rem) scale(1.02);
+  box-shadow:
+    0 1rem 2rem rgba(96, 80, 56, 0.22),
+    inset 0 0 0 1px rgba(120, 106, 86, 0.06);
+  z-index: 2;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.4rem) rotate(var(--tilt, 0deg)) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--tilt, 0deg)) scale(1);
+  }
+}
+
+/* a small strip of tape holding each note to the wall */
+.note-tape {
+  position: absolute;
+  top: -0.5rem;
+  left: 50%;
+  width: 3rem;
+  height: 1rem;
+  transform: translateX(-50%) rotate(-3deg);
+  background: rgba(231, 212, 173, 0.5);
+  border: 1px solid rgba(199, 154, 90, 0.22);
+  border-radius: 0.1rem;
+  box-shadow: 0 0.15rem 0.35rem rgba(150, 130, 90, 0.16);
+}
+
+/* tighter typography than the old single-note view so cards stay compact */
+.note-card .note-mood {
+  margin: 0.5rem 0 0.7rem;
+  font-size: clamp(1.5rem, 4.5vw, 1.9rem);
+  line-height: 1.25;
+}
+
+.note-card .note-song {
+  font-size: 1rem;
+}
+
+.load-more {
+  display: block;
+  margin: 1.8rem auto 0;
+}
+
+/* ---- floating "leave a note" button ---- */
+.compose-fab {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 3.2rem;
+  padding: 0 1.3rem;
+  border: 1px solid rgba(199, 154, 90, 0.45);
+  border-radius: 999px;
+  color: #4a3a1f;
+  background: linear-gradient(180deg, #ecd9af 0%, var(--accent-soft) 100%);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 0.6rem 1.4rem rgba(150, 110, 50, 0.32);
+  transition: transform 0.18s ease, box-shadow 0.25s ease, filter 0.25s ease;
+}
+
+.compose-fab-mark {
+  font-size: 1.05rem;
+}
+
+.compose-fab:hover:not(:disabled) {
+  filter: brightness(1.04);
+  box-shadow: 0 0.8rem 1.7rem rgba(150, 110, 50, 0.38);
+}
+
+.compose-fab:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+
+.compose-fab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ---- compose modal ---- */
+.compose-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 4rem 1.25rem 2rem;
+  background: rgba(60, 50, 36, 0.38);
+  backdrop-filter: blur(3px);
+  overflow-y: auto;
+  animation: backdrop-in 0.25s ease both;
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* override the tilt + settle the shared .paper class brings, so the modal
+   sits square and slides in cleanly */
+.compose-modal {
+  width: min(100%, 30rem);
+  margin: auto 0;
+  transform: none;
+  animation: modal-in 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.8rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.compose-close {
+  display: block;
+  margin-left: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-card,
+  .compose-backdrop,
+  .compose-modal {
+    animation: none;
+  }
+}
+
+@media (min-width: 44rem) {
+  .wall-shell {
+    padding: 5.5rem 2rem 7rem;
+  }
+}
