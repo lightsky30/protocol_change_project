@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Charging Station — Prototype &amp; Reflection</title>
+<title>Charging Station</title>
 <meta name="description" content="A water cooler in the undergraduate branch library, turned into a place to read and leave a little encouragement during exam season." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -11,7 +11,6 @@
 <style>
   :root {
     --paper: #fbf7ee;
-    --paper-edge: #f3ecdd;
     --wall: #efe9dd;
     --ink: #423b32;
     --ink-soft: #6f6557;
@@ -19,7 +18,6 @@
     --line: rgba(120, 106, 86, 0.16);
     --accent: #c79a5a;
     --accent-deep: #a87d3f;
-    --pin: #d98c7a;
     --shadow: rgba(96, 80, 56, 0.18);
     --font-hand: "Caveat", cursive;
     --font-body: "Gowun Dodum", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -34,260 +32,233 @@
       radial-gradient(circle at 50% -10%, rgba(255, 251, 242, 0.9), transparent 60%),
       radial-gradient(circle at 0% 100%, rgba(228, 218, 200, 0.5), transparent 55%),
       radial-gradient(circle at 100% 90%, rgba(228, 218, 200, 0.45), transparent 55%);
+    scroll-behavior: smooth;
   }
 
   body {
     margin: 0;
     color: var(--ink);
-    font-family: var(--font-body);
-    line-height: 1.7;
+    font-family: var(--font-note);
+    line-height: 1.9;
+    font-size: 1.08rem;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
 
-  .shell {
-    max-width: 720px;
+  /* A centered reading column. Images and the wall break out wider. */
+  .col {
+    max-width: 34em;
     margin: 0 auto;
-    padding: 40px 22px 80px;
+    padding: 0 24px;
   }
 
-  header.cover {
+  /* ---- Opening ---- */
+  .hero {
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
-    padding: 24px 0 8px;
+    padding: 40px 24px;
+    position: relative;
   }
-
-  .eyebrow {
+  .hero .eyebrow {
     font-family: var(--font-body);
-    font-size: 0.78rem;
-    letter-spacing: 0.18em;
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
     color: var(--ink-faint);
-    margin: 0 0 14px;
+    margin: 0 0 28px;
   }
-
-  h1 {
+  .hero h1 {
     font-family: var(--font-hand);
     font-weight: 700;
-    font-size: clamp(2.6rem, 9vw, 3.8rem);
-    line-height: 1.05;
-    margin: 0 0 10px;
+    font-size: clamp(2.8rem, 12vw, 4.6rem);
+    line-height: 1.0;
+    margin: 0;
     color: var(--ink);
   }
-
-  .subtitle {
+  .hero .en {
     font-family: var(--font-note);
+    font-size: clamp(1rem, 4vw, 1.2rem);
     color: var(--ink-soft);
-    font-size: 1.02rem;
-    margin: 0 auto;
-    max-width: 30em;
+    margin: 20px 0 0;
+  }
+  .scroll-cue {
+    position: absolute;
+    bottom: 28px;
+    color: var(--ink-faint);
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    animation: float 2.4s ease-in-out infinite;
+  }
+  @keyframes float { 0%,100% { transform: translateY(0); opacity: 0.6; } 50% { transform: translateY(6px); opacity: 1; } }
+
+  /* ---- Story ---- */
+  p { margin: 0 0 1.6em; }
+  .col p:first-child { margin-top: 0; }
+  strong { color: var(--ink); font-weight: 700; }
+
+  section.scene { padding: 9vh 0; }
+
+  /* Full-width image, breaking out of the reading column. */
+  .bleed {
+    margin: 6vh 0;
+    width: 100%;
+  }
+  .bleed img {
+    display: block;
+    width: 100%;
+    max-height: 80vh;
+    object-fit: cover;
+  }
+  .bleed figcaption {
+    text-align: center;
+    color: var(--ink-faint);
+    font-size: 0.85rem;
+    font-family: var(--font-body);
+    margin-top: 12px;
+    padding: 0 24px;
   }
 
-  .live-cta {
+  /* Handwritten breath lines between paragraphs. */
+  .breath {
+    font-family: var(--font-hand);
+    font-weight: 700;
+    font-size: clamp(1.9rem, 7vw, 2.8rem);
+    line-height: 1.15;
+    text-align: center;
+    color: var(--accent-deep);
+    margin: 8vh auto;
+    max-width: 16em;
+    padding: 0 24px;
+  }
+
+  /* ---- The living wall ---- */
+  .wall-stage {
+    padding: 10vh 16px 6vh;
+    text-align: center;
+  }
+  .wall-stage .lead-hand {
+    font-family: var(--font-hand);
+    font-weight: 700;
+    font-size: clamp(2rem, 8vw, 3rem);
+    color: var(--ink);
+    margin: 0 0 6px;
+  }
+  .wall-stage .lead-sub {
+    font-family: var(--font-body);
+    color: var(--ink-soft);
+    font-size: 0.98rem;
+    margin: 0 0 30px;
+  }
+  .phone {
+    width: min(380px, 92vw);
+    margin: 0 auto;
+    border-radius: 30px;
+    padding: 10px;
+    background: #2f2a23;
+    box-shadow: 0 24px 60px var(--shadow);
+  }
+  .phone iframe {
+    width: 100%;
+    height: 620px;
+    border: 0;
+    border-radius: 22px;
+    background: var(--wall);
+    display: block;
+  }
+  .open-full {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     margin-top: 26px;
-    padding: 13px 26px;
+    padding: 12px 24px;
     border-radius: 999px;
     background: var(--ink);
     color: var(--paper);
     font-family: var(--font-body);
-    font-size: 1rem;
+    font-size: 0.95rem;
     text-decoration: none;
     box-shadow: 0 8px 20px var(--shadow);
     transition: transform 0.2s ease, background 0.2s ease;
   }
-  .live-cta:hover { transform: translateY(-2px); background: #2f2a23; color: var(--paper); }
-  .live-cta .mark { font-size: 1.15rem; }
-
-  section {
-    margin-top: 38px;
-  }
-
-  h2 {
-    font-family: var(--font-hand);
-    font-weight: 700;
-    font-size: 1.85rem;
-    line-height: 1.2;
-    margin: 0 0 12px;
-    color: var(--ink);
-    position: relative;
-    padding-bottom: 8px;
-  }
-  h2::after {
-    content: "";
-    position: absolute;
-    left: 0; bottom: 0;
-    width: 46px; height: 2px;
-    background: var(--accent);
-    border-radius: 2px;
-  }
-
-  p { margin: 0 0 14px; }
-  strong { color: var(--ink); }
-  em { color: var(--accent-deep); font-style: normal; font-weight: 700; }
-
-  ul, ol { margin: 0 0 14px; padding-left: 1.25em; }
-  li { margin-bottom: 8px; }
-
-  .lede {
-    font-family: var(--font-note);
-    font-size: 1.08rem;
-  }
-
-  /* Media placeholder — swap the inner content for <img>/<video> later. */
-  figure {
-    margin: 22px 0;
-  }
-  .media {
-    border: 1.5px dashed var(--line);
-    border-radius: 14px;
-    background: var(--paper);
-    min-height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    color: var(--ink-faint);
-    font-family: var(--font-note);
-    font-size: 0.95rem;
-    padding: 28px 20px;
-    box-shadow: 0 6px 16px var(--shadow);
-  }
-  .media img, .media video { width: 100%; border-radius: 10px; display: block; }
-  figcaption {
-    margin-top: 8px;
-    text-align: center;
-    color: var(--ink-faint);
-    font-size: 0.86rem;
-    font-family: var(--font-note);
-  }
-
-  /* The four protocol questions, set apart like pinned cards. */
-  .qcard {
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-left: 4px solid var(--accent);
-    border-radius: 12px;
-    padding: 18px 20px;
-    margin: 16px 0;
-    box-shadow: 0 6px 16px var(--shadow);
-  }
-  .qcard h3 {
-    font-family: var(--font-body);
-    font-size: 0.95rem;
-    color: var(--accent-deep);
-    margin: 0 0 8px;
-    font-weight: 700;
-  }
-  .qcard p:last-child { margin-bottom: 0; }
-
-  .reflect {
-    background: rgba(231, 212, 173, 0.22);
-    border-radius: 12px;
-    padding: 20px 22px;
-    margin: 16px 0;
-  }
-  .reflect h2 { margin-top: 0; }
-
-  .note {
-    font-size: 0.9rem;
-    color: var(--ink-faint);
-    font-style: italic;
-  }
+  .open-full:hover { transform: translateY(-2px); background: #2f2a23; }
 
   footer {
-    margin-top: 60px;
+    padding: 12vh 24px 14vh;
     text-align: center;
     color: var(--ink-faint);
-    font-size: 0.85rem;
-    font-family: var(--font-note);
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    line-height: 1.8;
   }
-  footer a { color: var(--accent-deep); }
 </style>
 </head>
 <body>
-<main class="shell">
 
-  <header class="cover">
-    <p class="eyebrow">DS1(A) Week 13 · Protocol — Development Phase 2</p>
-    <h1>Charging Station</h1>
-    <p class="subtitle">A water cooler in the undergraduate branch library, turned into a place to read and leave a little encouragement during exam season.</p>
-    <a class="live-cta" href="#" id="live-link">
-      <span class="mark">♪</span> Open the live wall
-    </a>
+  <!-- Opening -->
+  <header class="hero">
+    <p class="eyebrow">DS1(A) Week 13 · Protocol</p>
+    <h1>물도 채우고,<br />마음도 한 잔.</h1>
+    <p class="en">Fill your cup — and your heart too.</p>
+    <span class="scroll-cue">scroll ↓</span>
   </header>
 
-  <figure>
-    <div class="media"><img src="cooler.jpg" alt="A water cooler with a small QR code taped on the wall above it." /></div>
-    <figcaption>The prototype — a QR code taped on the wall beside the library water cooler.</figcaption>
+  <figure class="bleed">
+    <img src="cooler.jpg" alt="A water cooler in the library, with a small QR code taped on the wall beside it." />
+    <figcaption>The undergraduate branch library water cooler. One QR code, on the wall.</figcaption>
   </figure>
 
-  <section>
-    <h2>The protocol of this site</h2>
-    <p class="lede">Every place has a protocol — a quiet set of rules about how people move, how long they stay, and what they do. The <strong>water cooler in the undergraduate branch library</strong> has a clear one: <em>come, fill your cup, and leave.</em></p>
-    <p>People do it alone. They do it in silence. It takes about five seconds, and no one looks at anyone. During exam time the protocol is even stronger — tired students come on autopilot, fill water, and go back to studying. Everyone is tired in the same way, but no one shows it and no one shares it.</p>
-  </section>
-
-  <section>
-    <h2>From a failure to this site</h2>
-    <p>My first try was in the <strong>space under the stairs in the Creative Learning Building</strong>. The idea looked okay, but the place was wrong. It is a spot people just walk past without paying much attention, so they had no reason to stop and leave something. There was no moment when they slowed down, so almost no one used it.</p>
-    <p>That failure taught me what I needed: <strong>a place where people already stop for a few seconds, with nothing in their hands.</strong> That is exactly the water cooler. I don't have to make people pause — the protocol of the place already does it. So I didn't build a new space. I added one small thing on top of a habit that was already there: the place where you fill water becomes the place where you fill yourself.</p>
-  </section>
-
-  <section>
-    <h2>The four questions</h2>
-
-    <div class="qcard">
-      <h3>What is the protocol of this site?</h3>
-      <p>Come, fill your cup, and leave — alone, in silence, in about five seconds. During exam season everyone arrives tired in the same way, but no one shows it or shares it.</p>
-    </div>
-
-    <div class="qcard">
-      <h3>What did you want to change, reveal, or make visible?</h3>
-      <p>One thing: <em>you are not the only tired person standing here.</em> I wanted to keep the quiet, but turn the lonely five seconds into a small shared moment — a place to get a little encouragement, leave a little for the next person, and pass on one song.</p>
-    </div>
-
-    <div class="qcard">
-      <h3>Why this addition, and not something else?</h3>
-      <p>A sign would only be read once and changes nothing. A paper guestbook would feel exposed and need supplies and cleaning. But a <strong>QR code + the wall on your own phone</strong> fits the protocol perfectly: it lives in the five-second pause, stays private on your screen, is anonymous, and <strong>grows over time</strong> instead of staying still. It adds to the habit without breaking the silence.</p>
-    </div>
-
-    <div class="qcard">
-      <h3>What impact did it bring?</h3>
-      <p>I wasn't able to see someone use it, but I hope it would have made a smile on his or her face.</p>
+  <section class="scene">
+    <div class="col">
+      <p>There is a water cooler in the undergraduate branch library, and it has a quiet rule that no one wrote down. You come, you fill your cup, and you leave. You do it alone. You do it in silence. It takes about five seconds, and no one looks at anyone.</p>
+      <p>During exam season the rule gets stronger. Tired students come on autopilot, fill water, and go back to studying. Everyone here is tired in the same way — but no one shows it, and no one shares it.</p>
     </div>
   </section>
 
-  <section>
-    <h2>What I installed</h2>
-    <p>I made the simplest version. Just one hand-written card with a QR code, taped next to the cooler at eye level. The web app (the wall) was already working behind the QR. No fancy sign, no long instructions, only one line. I didn't want it to look finished — I just wanted to find out fast what works and what doesn't.</p>
-    <figure>
-      <div class="media"><img src="wall.png" alt="The encouragement wall, with notes and song recommendations pinned up." /></div>
-      <figcaption>The wall as it looks right now.</figcaption>
-    </figure>
+  <p class="breath">What if the place where you fill water became the place where you fill yourself?</p>
+
+  <section class="scene">
+    <div class="col">
+      <p>I didn't get here on the first try. My first attempt was in the space under the stairs in the Creative Learning Building. The idea wasn't bad, but the place was. It is a spot people just walk past without paying much attention. There was no moment when they slowed down, so almost no one used it.</p>
+      <p>That failure told me exactly what I needed: a place where people already stop for a few seconds, with nothing in their hands. The cooler is that place. I don't have to make anyone pause — the cooler already does. So I didn't build a new space. I added one small thing on top of a habit that was already there.</p>
+    </div>
   </section>
 
-  <section class="reflect">
-    <h2>Did it work as intended?</h2>
-    <p>I couldn't watch someone use it with my own eyes. But in one day, <strong>three new notes appeared on the wall.</strong> So even though I didn't see it happen, people did stop and leave something. I hope many more people see it and add to it until the exams are over.</p>
-    <p>One thing is already clear. In the Creative Learning Building, I had to give people a reason to stop. At the cooler, the protocol gives me that pause for free.</p>
+  <section class="scene">
+    <div class="col">
+      <p>What I taped to the wall is just a QR code. Open it, and a wall of small notes appears — each one a line of mood and a song someone left behind. You can read what strangers wrote. You can leave your own, and pick a song for the next tired person. No names, no login. Only quiet encouragement, piling up.</p>
+      <p>I thought about a sign, but a sign is read once and changes nothing. I thought about a paper guestbook, but it would feel exposed, and it needs supplies and cleaning. A QR code and a wall on your own phone fit the rule of the place: it lives inside the five-second pause, it stays private on your screen, and it grows over time instead of standing still. It adds to the habit without breaking the silence.</p>
+    </div>
+  </section>
+
+  <p class="breath">You are not the only tired person standing here.</p>
+
+  <section class="scene">
+    <div class="col">
+      <p>I couldn't stand there and watch someone use it. But in a single day, three new notes appeared on the wall. So even though I never saw it happen, people did stop, and they did leave something behind. I wasn't there to see their faces — but I hope, for a second, it put a small smile on one of them.</p>
+      <p>I hope many more people find it, and add to it, until the exams are over.</p>
+    </div>
+  </section>
+
+  <!-- The living wall, embedded -->
+  <section class="wall-stage">
+    <p class="lead-hand">The wall is open.</p>
+    <p class="lead-sub">Read what others left. Leave one for the next person.</p>
+    <div class="phone">
+      <iframe src="https://you-found-something.vercel.app/" title="The live encouragement wall" loading="lazy"></iframe>
+    </div>
+    <a class="open-full" href="https://you-found-something.vercel.app/" target="_blank" rel="noopener">Open the wall full screen ↗</a>
   </section>
 
   <footer>
-    <p>Charging Station · a site-specific gesture at the undergraduate branch library water cooler.<br />
-    <a href="#" id="live-link-foot">Open the live wall →</a></p>
+    At a normal cooler, your turn ends when the cup is full.<br />
+    Here, the cup fills — and you fill too.<br /><br />
+    Charging Station · undergraduate branch library
   </footer>
 
-</main>
-
-<script>
-  // Put your deployed wall URL here once, and both buttons update.
-  var LIVE_WALL_URL = "https://you-found-something.vercel.app/";
-  var a = document.getElementById("live-link");
-  var b = document.getElementById("live-link-foot");
-  if (a) a.href = LIVE_WALL_URL;
-  if (b) b.href = LIVE_WALL_URL;
-</script>
 </body>
 </html>
